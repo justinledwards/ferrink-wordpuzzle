@@ -1,0 +1,469 @@
+export struct GuessCell {
+    letter: string,
+    status: int,
+}
+
+export struct KeyState {
+    letter: string,
+    status: int,
+}
+
+export component WordleView inherits Window {
+    width: 758px;
+    height: 1024px;
+    background: white;
+
+    // Properties for UI state (pushed from Rust)
+    in-out property <[GuessCell]> cells;
+    in-out property <[KeyState]> keys;
+    in-out property <bool> game-over;
+    in-out property <string> message;
+    in-out property <string> answer;
+    in-out property <int> visible-rows;
+
+    // Callbacks from UI to controller (handled by Rust)
+    callback guess-letter(string);
+    callback delete-letter();
+    callback submit-guess();
+    callback new-game();
+    callback quit();
+
+    // Layout constants — dynamic to fill screen with 20px margins
+    property <length> margin: 50px;
+    property <length> avail-width: root.width - margin * 2;
+    property <length> cell-gap: 4px;
+    property <length> cell-size: Math.min((avail-width - cell-gap * 4) / 5, 80px);
+    property <length> key-gap: 3px;
+    property <length> key-width: (avail-width - key-gap * 9) / 10;
+    property <length> key-height: 48px;
+    property <length> grid-width: cell-size * 5 + cell-gap * 4;
+    property <length> grid-top: 10px;
+    property <length> key-bottom-gap: 16px;
+    // Keyboard keys — thin, rounded, light gray default
+    property <length> key-special-width: 56px;
+    property <length> row1-width: key-width * 10 + key-gap * 9;
+    property <length> row2-width: key-width * 9 + key-gap * 8;
+    property <length> row3-width: key-special-width + key-width * 7 + key-gap * 6 + key-special-width;
+    // Keyboard rows anchored from bottom of window
+    property <length> key-row3-bot: root.height - key-bottom-gap;
+    property <length> key-row3-top: key-row3-bot - key-height;
+    property <length> key-row2-top: key-row3-top - key-gap - key-height;
+    property <length> key-row1-top: key-row2-top - key-gap - key-height;
+
+    // Message — above the grid
+    Text {
+        x: 0;
+        y: root.grid-top;
+        width: parent.width;
+        height: 24px;
+        text: root.message;
+        color: black;
+        font-size: 18px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        visible: root.message != "";
+    }
+
+    // Close button (top-right corner)
+    Rectangle {
+        x: parent.width - 50px;
+        y: 8px;
+        width: 36px;
+        height: 36px;
+        border-width: 2px;
+        border-color: black;
+        background: close-touch.pressed ? black : white;
+
+        close-touch := TouchArea {
+            clicked => { root.quit(); }
+        }
+
+        Text {
+            text: "×";
+            color: close-touch.pressed ? white : black;
+            font-size: 24px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Game grid rows
+    for rowIndex in [0, 1, 2, 3, 4, 5] : Rectangle {
+        visible: rowIndex < root.visible-rows;
+        x: root.margin + (root.avail-width - root.grid-width) / 2;
+        y: grid-top + 36px + rowIndex * (cell-size + cell-gap);
+        width: grid-width;
+        height: cell-size;
+        background: white;
+
+        for columnIndex in [0, 1, 2, 3, 4] : Rectangle {
+            property <int> idx: rowIndex * 5 + columnIndex;
+            x: columnIndex * (cell-size + cell-gap);
+            y: 0;
+            width: cell-size;
+            height: cell-size;
+            border-width: 2px;
+            border-color: idx < root.cells.length ? root.cell-border-color(root.cells[idx].status) : #d3d6da;
+            border-radius: 3px;
+            background: idx < root.cells.length
+                ? root.cell-bg(root.cells[idx].status)
+                : white;
+            Text {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                text: idx < root.cells.length ? root.cells[idx].letter : "";
+                color: idx < root.cells.length
+                    ? root.cell-fg(root.cells[idx].status)
+                    : black;
+                font-size: root.cell-size * 0.45;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            // Status indicator symbol (■ □ ×)
+            Text {
+                x: parent.width - 16px;
+                y: 1px;
+                width: 14px;
+                height: 14px;
+                text: idx < root.cells.length ? root.cell-indicator(root.cells[idx].status) : "";
+                color: black;
+                font-size: 9px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Keyboard Row 1: Q W E R T Y U I O P
+    for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] : Rectangle {
+        x: root.margin + (root.avail-width - root.row1-width) / 2 + i * (key-width + key-gap);
+        y: key-row1-top;
+        width: key-width;
+        height: key-height;
+        border-width: 1px;
+        border-color: #d3d6da;
+        border-radius: 4px;
+        background: i < root.keys.length
+            ? root.key-bg(root.keys[i].status)
+            : white;
+
+            Text {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                text: i < root.keys.length
+                    ? root.keys[i].letter
+                    : "";
+                color: i < root.keys.length
+                    ? root.key-fg(root.keys[i].status)
+                    : black;
+                font-size: root.key-height * 0.3;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            // Keyboard key indicator
+            Text {
+                x: parent.width - 10px;
+                y: 0px;
+                width: 10px;
+                height: 10px;
+                text: i < root.keys.length ? root.key-indicator(root.keys[i].status) : "";
+                color: black;
+                font-size: 6px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+        TouchArea {
+            clicked => {
+                if i < root.keys.length {
+                    root.guess-letter(root.keys[i].letter);
+                }
+            }
+        }
+    }
+
+    // Keyboard Row 2: A S D F G H J K L
+    for i in [10, 11, 12, 13, 14, 15, 16, 17, 18] : Rectangle {
+        x: root.margin + (root.avail-width - root.row2-width) / 2 + (i - 10) * (key-width + key-gap);
+        y: key-row2-top;
+        width: key-width;
+        height: key-height;
+        border-width: 1px;
+        border-color: #d3d6da;
+        border-radius: 4px;
+        background: i < root.keys.length
+            ? root.key-bg(root.keys[i].status)
+            : white;
+
+            Text {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                text: i < root.keys.length
+                    ? root.keys[i].letter
+                    : "";
+                color: i < root.keys.length
+                    ? root.key-fg(root.keys[i].status)
+                    : black;
+                font-size: root.key-height * 0.3;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            // Keyboard key indicator
+            Text {
+                x: parent.width - 10px;
+                y: 0px;
+                width: 10px;
+                height: 10px;
+                text: i < root.keys.length ? root.key-indicator(root.keys[i].status) : "";
+                color: black;
+                font-size: 6px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+        TouchArea {
+            clicked => {
+                if i < root.keys.length {
+                    root.guess-letter(root.keys[i].letter);
+                }
+            }
+        }
+    }
+
+    // Keyboard Row 3: [Enter] Z X C V B N M [Delete]
+    // Enter key
+    Rectangle {
+        x: root.margin + (root.avail-width - root.row3-width) / 2;
+        y: key-row3-top;
+        width: key-special-width;
+        height: key-height;
+        border-width: 1px;
+        border-color: #d3d6da;
+        border-radius: 4px;
+        background: enter-touch.pressed ? #bbb : #d3d6da;
+
+        Text {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height;
+            text: "✓";
+            color: black;
+            font-size: root.key-height * 0.4;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        enter-touch := TouchArea {
+            clicked => { root.submit-guess(); }
+        }
+    }
+
+    for i in [19, 20, 21, 22, 23, 24, 25] : Rectangle {
+        x: root.margin + (root.avail-width - root.row3-width) / 2 + key-special-width + key-gap + (i - 19) * (key-width + key-gap);
+        y: key-row3-top;
+        width: key-width;
+        height: key-height;
+        border-width: 1px;
+        border-color: #d3d6da;
+        border-radius: 4px;
+        background: i < root.keys.length
+            ? root.key-bg(root.keys[i].status)
+            : white;
+
+            Text {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                text: i < root.keys.length
+                    ? root.keys[i].letter
+                    : "";
+                color: i < root.keys.length
+                    ? root.key-fg(root.keys[i].status)
+                    : black;
+                font-size: root.key-height * 0.3;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            // Keyboard key indicator
+            Text {
+                x: parent.width - 10px;
+                y: 0px;
+                width: 10px;
+                height: 10px;
+                text: i < root.keys.length ? root.key-indicator(root.keys[i].status) : "";
+                color: black;
+                font-size: 6px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+        TouchArea {
+            clicked => {
+                if i < root.keys.length {
+                    root.guess-letter(root.keys[i].letter);
+                }
+            }
+        }
+    }
+
+    // Delete key
+    Rectangle {
+        x: root.margin + (root.avail-width - root.row3-width) / 2 + key-special-width + key-gap + 7 * (key-width + key-gap);
+        y: key-row3-top;
+        width: key-special-width;
+        height: key-height;
+        border-width: 1px;
+        border-color: #d3d6da;
+        border-radius: 4px;
+        background: del-touch.pressed ? #bbb : #d3d6da;
+
+        del-touch := TouchArea {
+            clicked => { root.delete-letter(); }
+        }
+
+        Text {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height;
+            text: "←";
+            color: black;
+            font-size: root.key-height * 0.4;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Legend — shows what indicators mean (between grid and keyboard)
+    Rectangle {
+        x: root.margin + (root.avail-width - 280px) / 2;
+        y: key-row1-top - 74px;
+        width: 280px;
+        height: 24px;
+        border-width: 1px;
+        border-color: #d3d6da;
+        border-radius: 3px;
+        background: #f8f8f8;
+
+        Text {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height;
+            text: "■ Correct  □ Wrong  × Not in word";
+            color: black;
+            font-size: 11px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // New Game button — shows above keyboard only when game ends
+    Rectangle {
+        x: root.margin + (root.avail-width - 160px) / 2;
+        y: root.key-row1-top - 50px;
+        width: 160px;
+        height: 40px;
+        border-width: 2px;
+        border-color: black;
+        background: new-game-touch.pressed ? black : white;
+        visible: root.game-over;
+
+        new-game-touch := TouchArea {
+            clicked => { root.new-game(); }
+        }
+
+        Text {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height;
+            text: "New Game";
+            color: new-game-touch.pressed ? white : black;
+            font-size: 16px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Status: 0=empty, 1=absent, 2=present, 3=correct
+
+    function cell-border-width(status: int) -> length {
+        if status == 2 { return 5px; }   // present: thick border
+        return 2px;
+    }
+
+    function cell-border-color(status: int) -> color {
+        if status == 0 { return #d3d6da; }   // empty: light gray
+        return #888;                           // filled/evaluated: medium gray
+    }
+
+    function cell-bg(status: int) -> brush {
+        if status == 3 { return #777; }        // correct: medium gray
+        if status == 2 { return #ddd; }        // present: light gray
+        if status == 1 { return white; }        // absent: white
+        return white;
+    }
+
+    function cell-fg(status: int) -> color {
+        if status == 3 { return white; }        // correct: white on gray
+        return black;
+    }
+
+    function cell-indicator(status: int) -> string {
+        if status == 3 { return "■"; }          // correct spot
+        if status == 2 { return "□"; }          // wrong spot
+        if status == 1 { return "×"; }          // not in word
+        return "";
+    }
+
+    function key-bg(status: int) -> brush {
+        if status == 3 { return #777; }         // correct: medium gray
+        if status == 2 { return #ddd; }         // present: light gray
+        if status == 1 { return white; }        // absent: white
+        return #d3d6da;                           // unused: light gray default
+    }
+
+    function key-indicator(status: int) -> string {
+        if status == 3 { return "■"; }
+        if status == 2 { return "□"; }
+        if status == 1 { return "×"; }
+        return "";
+    }
+
+    function key-border-width(status: int) -> length {
+        if status == 2 { return 5px; }
+        return 2px;
+    }
+
+    function key-fg(status: int) -> color {
+        if status == 3 { return white; }
+        return black;
+    }
+}

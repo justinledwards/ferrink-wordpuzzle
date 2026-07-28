@@ -1,0 +1,32 @@
+[package]
+name = "slint-wordle"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "slint-wordle"
+path = "src/main.rs"
+
+[build-dependencies]
+slint-build = { git = "https://github.com/slint-ui/slint", rev = "5e122db954f9e92c26b1924c021b8c8ece323908" }
+
+[dependencies]
+slint = { git = "https://github.com/slint-ui/slint", rev = "5e122db954f9e92c26b1924c021b8c8ece323908", features = ["std", "compat-1-2", "renderer-software"] }
+zstd = "0.13.3"
+rand = "0.10.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+slint = { git = "https://github.com/slint-ui/slint", rev = "5e122db954f9e92c26b1924c021b8c8ece323908", features = ["std", "compat-1-2", "renderer-software"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
