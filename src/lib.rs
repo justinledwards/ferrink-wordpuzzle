@@ -7,7 +7,18 @@ mod word_data;
 
 pub use callback::*;
 
+#[cfg(all(target_arch = "arm", target_os = "linux", target_env = "musl"))]
+static KINDLE_FONT: &[u8] = include_bytes!("../fonts/LiberationSans-Regular.ttf");
+
 pub fn main() {
+    #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "musl"))]
+    let _kindle_backend = {
+        let backend =
+            slint_backend_kindle::install(KINDLE_FONT).expect("failed to install Kindle backend");
+        backend.set_black_and_white(true);
+        backend
+    };
+
     let (main_window, controller) = init();
     if std::env::var("SLINT_MCP_PORT").is_ok() {
         start_demo(&main_window, &controller);
@@ -18,8 +29,7 @@ pub fn main() {
 fn init() -> (ui::WordleView, mvc::WordleController) {
     let view_handle = ui::WordleView::new().unwrap();
 
-    let wordle_controller =
-        mvc::WordleController::new(mvc::WordRepositoryImpl::new());
+    let wordle_controller = mvc::WordleController::new(mvc::WordRepositoryImpl::new());
 
     ui::wordle_adapter::connect(&view_handle, &wordle_controller);
 
@@ -48,21 +58,25 @@ fn start_demo(view: &ui::WordleView, controller: &mvc::WordleController) {
     // Guess 2: only first letter correct, rest absent
     let guess2 = all_words
         .iter()
-        .filter(|w| {
+        .find(|w| {
             let wc: Vec<char> = w.chars().collect();
             wc[0] == target_chars[0]
-                && wc[1..].iter().all(|c| !used.contains(c) || *c != target_chars[1]
-                    && *c != target_chars[2] && *c != target_chars[3] && *c != target_chars[4])
+                && wc[1..].iter().all(|c| {
+                    !used.contains(c)
+                        || *c != target_chars[1]
+                            && *c != target_chars[2]
+                            && *c != target_chars[3]
+                            && *c != target_chars[4]
+                })
                 && w.as_str() != target
         })
-        .next()
         .cloned()
         .unwrap_or_else(|| guess1.clone());
 
     // Guess 3: first two correct, rest wrong (mix of correct + absent)
     let guess3 = all_words
         .iter()
-        .filter(|w| {
+        .find(|w| {
             let wc: Vec<char> = w.chars().collect();
             wc[0] == target_chars[0]
                 && wc[1] == target_chars[1]
@@ -71,22 +85,22 @@ fn start_demo(view: &ui::WordleView, controller: &mvc::WordleController) {
                 && wc[4] != target_chars[4]
                 && w.as_str() != target
         })
-        .next()
         .cloned()
         .unwrap_or_else(|| guess2.clone());
 
     // Guess 4: three correct, one present, one wrong
     let guess4 = all_words
         .iter()
-        .filter(|w| {
+        .find(|w| {
             let wc: Vec<char> = w.chars().collect();
             let mut matches = 0;
             for i in 0..5 {
-                if wc[i] == target_chars[i] { matches += 1; }
+                if wc[i] == target_chars[i] {
+                    matches += 1;
+                }
             }
             matches >= 3 && w.as_str() != target
         })
-        .next()
         .cloned()
         .unwrap_or_else(|| guess3.clone());
 
@@ -95,7 +109,7 @@ fn start_demo(view: &ui::WordleView, controller: &mvc::WordleController) {
 
     let weak = view.as_weak();
     let timer = Timer::default();
-    let state = std::rc::Rc::new(std::cell::RefCell::new(0i32));
+    let state = std::rc::Rc::new(std::cell::RefCell::new(0_usize));
 
     timer.start(
         TimerMode::Repeated,
@@ -131,7 +145,7 @@ fn start_demo(view: &ui::WordleView, controller: &mvc::WordleController) {
                     }
                 };
 
-                if let Some(ch) = guess_str.chars().nth((*step - next_offset) as usize) {
+                if let Some(ch) = guess_str.chars().nth(*step - next_offset) {
                     view.invoke_guess_letter(slint::SharedString::from(ch.to_string()));
                 }
 

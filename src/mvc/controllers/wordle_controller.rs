@@ -35,6 +35,7 @@ pub struct WordleController {
 struct WordleState {
     target_word: String,
     guesses: Vec<Vec<Option<char>>>,
+    evaluations: Vec<[LetterStatus; WORD_LEN]>,
     current_row: usize,
     game_state: GameState,
     keyboard: HashMap<char, LetterStatus>,
@@ -48,6 +49,7 @@ impl WordleController {
             inner: Rc::new(RefCell::new(WordleState {
                 target_word: String::new(),
                 guesses: vec![vec![None; WORD_LEN]; MAX_GUESSES],
+                evaluations: vec![[LetterStatus::Unknown; WORD_LEN]; MAX_GUESSES],
                 current_row: 0,
                 game_state: GameState::Playing,
                 keyboard: HashMap::new(),
@@ -68,6 +70,7 @@ impl WordleController {
             .unwrap_or_else(|| "plant".into());
         inner.target_word = word;
         inner.guesses = vec![vec![None; WORD_LEN]; MAX_GUESSES];
+        inner.evaluations = vec![[LetterStatus::Unknown; WORD_LEN]; MAX_GUESSES];
         inner.current_row = 0;
         inner.game_state = GameState::Playing;
         inner.keyboard.clear();
@@ -110,10 +113,7 @@ impl WordleController {
             return false;
         }
         // Validate guess is a real word in the word list
-        let guess: String = inner.guesses[row]
-            .iter()
-            .map(|c| c.unwrap())
-            .collect();
+        let guess: String = inner.guesses[row].iter().filter_map(|cell| *cell).collect();
         let valid_words = inner.repo.get_words(WORD_LEN);
         if !valid_words.contains(&guess) {
             return false;
@@ -133,7 +133,7 @@ impl WordleController {
         let guess_chars: Vec<char> = guess.chars().collect();
         let target: Vec<char> = inner.target_word.chars().collect();
 
-        let mut result = vec![LetterStatus::Absent; WORD_LEN];
+        let mut result = [LetterStatus::Absent; WORD_LEN];
         let mut target_remaining = target.clone();
         for i in 0..WORD_LEN {
             if guess_chars[i] == target[i] {
@@ -151,15 +151,19 @@ impl WordleController {
                 target_remaining[pos] = ' ';
             }
         }
+        inner.evaluations[row] = result;
 
         for (i, &letter) in guess_chars.iter().enumerate() {
-            let current = inner.keyboard.get(&letter).copied().unwrap_or(LetterStatus::Unknown);
+            let current = inner
+                .keyboard
+                .get(&letter)
+                .copied()
+                .unwrap_or(LetterStatus::Unknown);
             let new = result[i];
-            let upgrade = match (current, new) {
-                (LetterStatus::Correct, _) => false,
-                (LetterStatus::Present, LetterStatus::Absent) => false,
-                _ => true,
-            };
+            let upgrade = !matches!(
+                (current, new),
+                (LetterStatus::Correct, _) | (LetterStatus::Present, LetterStatus::Absent)
+            );
             if upgrade {
                 inner.keyboard.insert(letter, new);
             }
@@ -201,6 +205,17 @@ impl WordleController {
     pub fn guesses(&self) -> Vec<Vec<Option<char>>> {
         self.inner.borrow().guesses.clone()
     }
+
+    #[must_use]
+    pub fn cell_status(&self, row: usize, column: usize) -> LetterStatus {
+        self.inner
+            .borrow()
+            .evaluations
+            .get(row)
+            .and_then(|evaluation| evaluation.get(column))
+            .copied()
+            .unwrap_or(LetterStatus::Unknown)
+    }
 }
 
 #[cfg(test)]
@@ -208,10 +223,14 @@ mod tests {
     use super::*;
     use crate::mvc::WordRepository;
 
+    const TEST_WORDS: [&str; 9] = [
+        "plant", "crane", "brain", "stone", "chair", "ghost", "slate", "cabin", "cacao",
+    ];
+
     struct TestRepo;
     impl WordRepository for TestRepo {
         fn get_words(&self, _length: usize) -> Vec<String> {
-            vec!["plant".into(), "crane".into(), "brain".into(), "stone".into()]
+            TEST_WORDS.iter().map(ToString::to_string).collect()
         }
         fn unload_words(&self, _length: usize) {}
     }
@@ -263,15 +282,36 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_letters_do_not_exceed_target_letter_count() {
+        let ctrl = test_controller();
+        ctrl.inner.borrow_mut().target_word = "cabin".to_owned();
+        for letter in "cacao".chars() {
+            ctrl.guess_letter(letter);
+        }
+        assert!(ctrl.submit_guess());
+        assert_eq!(ctrl.cell_status(0, 0), LetterStatus::Correct);
+        assert_eq!(ctrl.cell_status(0, 1), LetterStatus::Correct);
+        assert_eq!(ctrl.cell_status(0, 2), LetterStatus::Absent);
+        assert_eq!(ctrl.cell_status(0, 3), LetterStatus::Absent);
+        assert_eq!(ctrl.cell_status(0, 4), LetterStatus::Absent);
+    }
+
+    #[test]
     fn test_six_wrong_guesses_loses() {
         let ctrl = test_controller();
         let target = ctrl.target_word();
-        let wrong = if target == "plant" { "stone" } else { "plant" };
-        for _ in 0..6 {
+        let wrong_words: Vec<_> = TEST_WORDS
+            .into_iter()
+            .filter(|word| *word != target)
+            .take(MAX_GUESSES)
+            .collect();
+        assert_eq!(wrong_words.len(), MAX_GUESSES);
+
+        for wrong in wrong_words {
             for ch in wrong.chars() {
                 ctrl.guess_letter(ch);
             }
-            ctrl.submit_guess();
+            assert!(ctrl.submit_guess());
         }
         assert_eq!(ctrl.game_state(), GameState::Lost);
     }

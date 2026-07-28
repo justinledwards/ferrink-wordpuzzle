@@ -9,13 +9,18 @@ pub struct Callback<Arguments: ?Sized, Result = ()> {
 
 impl<Arguments: ?Sized, Res> Default for Callback<Arguments, Res> {
     fn default() -> Self {
-        Self { callback: Cell::default() }
+        Self {
+            callback: Cell::default(),
+        }
     }
 }
 
 impl<Arguments: ?Sized, Result: Default> Callback<Arguments, Result> {
     pub fn on(&self, mut f: impl FnMut(&Arguments) -> Result + 'static) {
-        self.callback.set(Some(Box::new(move |a: &Arguments, r: &mut Result| *r = f(a))));
+        self.callback
+            .set(Some(Box::new(move |a: &Arguments, r: &mut Result| {
+                *r = f(a);
+            })));
     }
 
     pub fn invoke(&self, a: &Arguments) -> Result {

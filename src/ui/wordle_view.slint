@@ -104,8 +104,8 @@ export component WordleView inherits Window {
             y: 0;
             width: cell-size;
             height: cell-size;
-            border-width: 2px;
-            border-color: idx < root.cells.length ? root.cell-border-color(root.cells[idx].status) : #d3d6da;
+            border-width: idx < root.cells.length ? root.cell-border-width(root.cells[idx].status) : 2px;
+            border-color: black;
             border-radius: 3px;
             background: idx < root.cells.length
                 ? root.cell-bg(root.cells[idx].status)
@@ -147,8 +147,8 @@ export component WordleView inherits Window {
         y: key-row1-top;
         width: key-width;
         height: key-height;
-        border-width: 1px;
-        border-color: #d3d6da;
+        border-width: i < root.keys.length ? root.key-border-width(root.keys[i].status) : 2px;
+        border-color: black;
         border-radius: 4px;
         background: i < root.keys.length
             ? root.key-bg(root.keys[i].status)
@@ -200,8 +200,8 @@ export component WordleView inherits Window {
         y: key-row2-top;
         width: key-width;
         height: key-height;
-        border-width: 1px;
-        border-color: #d3d6da;
+        border-width: i < root.keys.length ? root.key-border-width(root.keys[i].status) : 2px;
+        border-color: black;
         border-radius: 4px;
         background: i < root.keys.length
             ? root.key-bg(root.keys[i].status)
@@ -254,19 +254,19 @@ export component WordleView inherits Window {
         y: key-row3-top;
         width: key-special-width;
         height: key-height;
-        border-width: 1px;
-        border-color: #d3d6da;
+        border-width: 2px;
+        border-color: black;
         border-radius: 4px;
-        background: enter-touch.pressed ? #bbb : #d3d6da;
+        background: enter-touch.pressed ? black : white;
 
         Text {
             x: 0;
             y: 0;
             width: parent.width;
             height: parent.height;
-            text: "✓";
-            color: black;
-            font-size: root.key-height * 0.4;
+            text: "GO";
+            color: enter-touch.pressed ? white : black;
+            font-size: root.key-height * 0.28;
             font-weight: 700;
             horizontal-alignment: center;
             vertical-alignment: center;
@@ -282,8 +282,8 @@ export component WordleView inherits Window {
         y: key-row3-top;
         width: key-width;
         height: key-height;
-        border-width: 1px;
-        border-color: #d3d6da;
+        border-width: i < root.keys.length ? root.key-border-width(root.keys[i].status) : 2px;
+        border-color: black;
         border-radius: 4px;
         background: i < root.keys.length
             ? root.key-bg(root.keys[i].status)
@@ -335,10 +335,10 @@ export component WordleView inherits Window {
         y: key-row3-top;
         width: key-special-width;
         height: key-height;
-        border-width: 1px;
-        border-color: #d3d6da;
+        border-width: 2px;
+        border-color: black;
         border-radius: 4px;
-        background: del-touch.pressed ? #bbb : #d3d6da;
+        background: del-touch.pressed ? black : white;
 
         del-touch := TouchArea {
             clicked => { root.delete-letter(); }
@@ -350,7 +350,7 @@ export component WordleView inherits Window {
             width: parent.width;
             height: parent.height;
             text: "←";
-            color: black;
+            color: del-touch.pressed ? white : black;
             font-size: root.key-height * 0.4;
             font-weight: 700;
             horizontal-alignment: center;
@@ -365,7 +365,7 @@ export component WordleView inherits Window {
         width: 280px;
         height: 24px;
         border-width: 1px;
-        border-color: #d3d6da;
+        border-color: black;
         border-radius: 3px;
         background: #f8f8f8;
 
@@ -419,11 +419,6 @@ export component WordleView inherits Window {
         return 2px;
     }
 
-    function cell-border-color(status: int) -> color {
-        if status == 0 { return #d3d6da; }   // empty: light gray
-        return #888;                           // filled/evaluated: medium gray
-    }
-
     function cell-bg(status: int) -> brush {
         if status == 3 { return #777; }        // correct: medium gray
         if status == 2 { return #ddd; }        // present: light gray
@@ -447,7 +442,7 @@ export component WordleView inherits Window {
         if status == 3 { return #777; }         // correct: medium gray
         if status == 2 { return #ddd; }         // present: light gray
         if status == 1 { return white; }        // absent: white
-        return #d3d6da;                           // unused: light gray default
+        return white;
     }
 
     function key-indicator(status: int) -> string {

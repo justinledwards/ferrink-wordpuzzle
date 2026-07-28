@@ -50,8 +50,10 @@ pub fn connect(view_handle: &ui::WordleView, controller: &WordleController) {
     });
 
     // Quit
-    view_handle.on_quit(move || {
-        std::process::exit(0);
+    view_handle.on_quit(|| {
+        if let Err(error) = slint::quit_event_loop() {
+            eprintln!("failed to stop the Slint event loop: {error}");
+        }
     });
 
     // Initial render
@@ -66,53 +68,35 @@ fn refresh_all(view_handle: &ui::WordleView, controller: &WordleController) {
 
 fn set_cells(view: &ui::WordleView, controller: &WordleController) {
     let guesses = controller.guesses();
-    let current_row = controller.current_row();
-    let game_state = controller.game_state();
 
     let mut cells: Vec<ui::GuessCell> = Vec::with_capacity(30);
-    for row in 0..6 {
-        for col in 0..5 {
-            let letter = guesses[row][col]
+    for (row, guess) in guesses.iter().enumerate().take(6) {
+        for (col, cell) in guess.iter().enumerate().take(5) {
+            let letter = cell
                 .map(|c| SharedString::from(c.to_uppercase().to_string()))
                 .unwrap_or_default();
 
-            let status = if row < current_row || (game_state != GameState::Playing && row <= current_row)
-            {
-                eval_cell_status(row, col, controller)
-            } else {
-                0
-            };
+            let status = letter_status_code(controller.cell_status(row, col));
             cells.push(ui::GuessCell { letter, status });
         }
     }
-    view.set_cells(ModelRc::new(VecModel::from(cells)).into());
+    view.set_cells(ModelRc::new(VecModel::from(cells)));
 }
 
-fn eval_cell_status(row: usize, col: usize, controller: &WordleController) -> i32 {
-    let guesses = controller.guesses();
-    let target = controller.target_word();
-    if row >= guesses.len() || col >= guesses[row].len() {
-        return 0;
+const fn letter_status_code(status: LetterStatus) -> i32 {
+    match status {
+        LetterStatus::Unknown => 0,
+        LetterStatus::Absent => 1,
+        LetterStatus::Present => 2,
+        LetterStatus::Correct => 3,
     }
-    let Some(ch) = guesses[row][col] else {
-        return 0;
-    };
-    let target_chars: Vec<char> = target.chars().collect();
-    if col < target_chars.len() && ch == target_chars[col] {
-        return 3;
-    }
-    if target_chars.contains(&ch) {
-        return 2;
-    }
-    1
 }
 
 fn set_keys(view: &ui::WordleView, controller: &WordleController) {
     let kb = controller.keyboard_state();
     let qwerty = [
-        'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
-        'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
-        'Z', 'X', 'C', 'V', 'B', 'N', 'M',
+        'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K',
+        'L', 'Z', 'X', 'C', 'V', 'B', 'N', 'M',
     ];
 
     let keys: Vec<ui::KeyState> = qwerty
@@ -120,13 +104,7 @@ fn set_keys(view: &ui::WordleView, controller: &WordleController) {
         .map(|&ch| {
             let status = kb
                 .get(&ch.to_ascii_lowercase())
-                .map(|s| match s {
-                    LetterStatus::Absent => 1,
-                    LetterStatus::Present => 2,
-                    LetterStatus::Correct => 3,
-                    LetterStatus::Unknown => 0,
-                })
-                .unwrap_or(0);
+                .map_or(0, |status| letter_status_code(*status));
             ui::KeyState {
                 letter: SharedString::from(ch.to_string()),
                 status,
@@ -134,16 +112,14 @@ fn set_keys(view: &ui::WordleView, controller: &WordleController) {
         })
         .collect();
 
-    view.set_keys(ModelRc::new(VecModel::from(keys)).into());
+    view.set_keys(ModelRc::new(VecModel::from(keys)));
 }
 
 fn set_game_state(view: &ui::WordleView, controller: &WordleController) {
     let state = controller.game_state();
     let current_row = controller.current_row();
 
-    // Show completed rows + current active row (capped at 6)
-    let visible = i32::try_from(current_row + 1).unwrap_or(1).min(6);
-    view.set_visible_rows(visible);
+    view.set_visible_rows(6);
 
     let msg = match state {
         GameState::Won => {

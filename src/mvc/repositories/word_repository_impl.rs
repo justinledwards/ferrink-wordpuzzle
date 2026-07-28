@@ -83,11 +83,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_load_words_6() {
+    fn test_load_words_5() {
         let repo = WordRepositoryImpl::new();
         let words = repo.get_words(5);
         assert!(!words.is_empty(), "Should load 5-letter words");
-        assert!(words.iter().all(|w| w.len() == 5), "All words should be 5 letters");
+        assert!(
+            words.iter().all(|w| w.len() == 5),
+            "All words should be 5 letters"
+        );
     }
 
     #[test]
