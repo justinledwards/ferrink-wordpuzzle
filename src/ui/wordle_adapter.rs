@@ -1,6 +1,6 @@
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::mvc::{GameState, LetterStatus, WordleController};
+use crate::mvc::{GameState, HistoryStatus, LetterStatus, WordleController};
 use crate::ui;
 
 /// Connect Slint UI callbacks to the controller.
@@ -64,6 +64,7 @@ fn refresh_all(view_handle: &ui::WordleView, controller: &WordleController) {
     set_cells(view_handle, controller);
     set_keys(view_handle, controller);
     set_game_state(view_handle, controller);
+    set_stats(view_handle, controller);
 }
 
 fn set_cells(view: &ui::WordleView, controller: &WordleController) {
@@ -130,9 +131,45 @@ fn set_game_state(view: &ui::WordleView, controller: &WordleController) {
             let answer = controller.target_word();
             SharedString::from(format!("Game over! Answer: {}", answer.to_uppercase()))
         }
-        GameState::Playing => SharedString::default(),
+        GameState::Playing => controller
+            .message()
+            .map(SharedString::from)
+            .unwrap_or_default(),
     };
     view.set_game_over(state != GameState::Playing);
     view.set_message(msg);
     view.set_answer(SharedString::from(controller.target_word().to_uppercase()));
+}
+
+fn set_stats(view: &ui::WordleView, controller: &WordleController) {
+    if let Some(stats) = controller.stats() {
+        view.set_stats_overview(SharedString::from(format!(
+            "PLAYED {}   WON {}   LOST {}",
+            stats.played, stats.won, stats.lost
+        )));
+        view.set_stats_streak(SharedString::from(format!(
+            "WIN {}%   STREAK {}   BEST {}",
+            stats.win_percent, stats.current_streak, stats.max_streak
+        )));
+        view.set_stats_distribution(SharedString::from(format!(
+            "1:{}   2:{}   3:{}   4:{}   5:{}   6:{}",
+            stats.wins_by_attempt[0],
+            stats.wins_by_attempt[1],
+            stats.wins_by_attempt[2],
+            stats.wins_by_attempt[3],
+            stats.wins_by_attempt[4],
+            stats.wins_by_attempt[5]
+        )));
+    } else {
+        view.set_stats_overview(SharedString::default());
+        view.set_stats_streak(SharedString::default());
+        view.set_stats_distribution(SharedString::default());
+    }
+
+    let warning = match controller.history_status() {
+        HistoryStatus::Ready => SharedString::default(),
+        HistoryStatus::Unsaved => SharedString::from("STATS NOT SAVED"),
+        HistoryStatus::Unavailable => SharedString::from("STATS UNAVAILABLE"),
+    };
+    view.set_stats_warning(warning);
 }

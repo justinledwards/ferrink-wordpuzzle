@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use super::traits::WordRepository;
 
 struct Inner {
-    cache: HashMap<usize, Vec<String>>,
+    target_cache: HashMap<usize, Vec<String>>,
+    word_cache: HashMap<usize, Vec<String>>,
 }
 
 pub struct WordRepositoryImpl {
@@ -16,7 +17,8 @@ impl WordRepositoryImpl {
     pub fn new() -> Self {
         Self {
             inner: RefCell::new(Inner {
-                cache: HashMap::new(),
+                target_cache: HashMap::new(),
+                word_cache: HashMap::new(),
             }),
         }
     }
@@ -25,6 +27,13 @@ impl WordRepositoryImpl {
 impl Default for WordRepositoryImpl {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn embedded_targets(length: usize) -> Option<&'static [u8]> {
+    match length {
+        5 => Some(crate::word_data::TARGETS_5),
+        _ => None,
     }
 }
 
@@ -57,9 +66,24 @@ fn decompress(data: &[u8]) -> Vec<String> {
 }
 
 impl WordRepository for WordRepositoryImpl {
+    fn get_targets(&self, length: usize) -> Vec<String> {
+        let mut inner = self.inner.borrow_mut();
+        if let Some(targets) = inner.target_cache.get(&length) {
+            return targets.clone();
+        }
+
+        let Some(data) = embedded_targets(length) else {
+            return Vec::new();
+        };
+
+        let targets = decompress(data);
+        inner.target_cache.insert(length, targets.clone());
+        targets
+    }
+
     fn get_words(&self, length: usize) -> Vec<String> {
         let mut inner = self.inner.borrow_mut();
-        if let Some(words) = inner.cache.get(&length) {
+        if let Some(words) = inner.word_cache.get(&length) {
             return words.clone();
         }
 
@@ -68,13 +92,14 @@ impl WordRepository for WordRepositoryImpl {
         };
 
         let words = decompress(data);
-        inner.cache.insert(length, words.clone());
+        inner.word_cache.insert(length, words.clone());
         words
     }
 
     fn unload_words(&self, length: usize) {
         let mut inner = self.inner.borrow_mut();
-        inner.cache.remove(&length);
+        inner.target_cache.remove(&length);
+        inner.word_cache.remove(&length);
     }
 }
 
