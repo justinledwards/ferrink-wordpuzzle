@@ -20,6 +20,10 @@ export component WordleView inherits Window {
     in-out property <string> message;
     in-out property <string> answer;
     in-out property <int> visible-rows;
+    in-out property <string> stats-overview;
+    in-out property <string> stats-streak;
+    in-out property <string> stats-distribution;
+    in-out property <string> stats-warning;
 
     // Callbacks from UI to controller (handled by Rust)
     callback guess-letter(string);
@@ -38,6 +42,7 @@ export component WordleView inherits Window {
     property <length> key-height: 48px;
     property <length> grid-width: cell-size * 5 + cell-gap * 4;
     property <length> grid-top: 10px;
+    property <length> grid-bottom: grid-top + 36px + cell-size * 6 + cell-gap * 5;
     property <length> key-bottom-gap: 16px;
     // Keyboard keys — thin, rounded, light gray default
     property <length> key-special-width: 56px;
@@ -358,6 +363,119 @@ export component WordleView inherits Window {
         }
     }
 
+    // Post-game statistics
+    Rectangle {
+        x: root.margin;
+        y: root.grid-bottom + 14px;
+        width: root.avail-width;
+        height: 194px;
+        border-width: 2px;
+        border-color: black;
+        background: white;
+        visible: root.game-over;
+
+        Text {
+            x: 0;
+            y: 8px;
+            width: parent.width;
+            height: 26px;
+            text: "STATISTICS";
+            color: black;
+            font-size: 18px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            x: 20px;
+            y: 39px;
+            width: parent.width - 40px;
+            height: 1px;
+            background: black;
+        }
+
+        Text {
+            x: 8px;
+            y: 46px;
+            width: parent.width - 16px;
+            height: 26px;
+            text: root.stats-overview;
+            color: black;
+            font-size: 16px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        Text {
+            x: 8px;
+            y: 76px;
+            width: parent.width - 16px;
+            height: 26px;
+            text: root.stats-streak;
+            color: black;
+            font-size: 16px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        Text {
+            x: 8px;
+            y: 108px;
+            width: parent.width - 16px;
+            height: 20px;
+            text: "WINS BY ATTEMPT";
+            color: black;
+            font-size: 13px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        Text {
+            x: 8px;
+            y: 130px;
+            width: parent.width - 16px;
+            height: 24px;
+            text: root.stats-distribution;
+            color: black;
+            font-size: 15px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        Text {
+            x: 8px;
+            y: 160px;
+            width: parent.width - 16px;
+            height: 24px;
+            text: root.stats-warning;
+            color: black;
+            font-size: 14px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Keep storage failures visible after the next game starts.
+    Text {
+        x: root.margin;
+        y: root.grid-bottom + 16px;
+        width: root.avail-width;
+        height: 24px;
+        text: root.stats-warning;
+        color: black;
+        font-size: 14px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        visible: !root.game-over && root.stats-warning != "";
+    }
+
     // Legend — shows what indicators mean (between grid and keyboard)
     Rectangle {
         x: root.margin + (root.avail-width - 280px) / 2;
@@ -368,13 +486,14 @@ export component WordleView inherits Window {
         border-color: black;
         border-radius: 3px;
         background: #f8f8f8;
+        visible: !root.game-over;
 
         Text {
             x: 0;
             y: 0;
             width: parent.width;
             height: parent.height;
-            text: "■ Correct  □ Wrong  × Not in word";
+            text: "■ = Correct spot   □ = Wrong spot   × = Not in word";
             color: black;
             font-size: 11px;
             font-weight: 700;
@@ -415,34 +534,31 @@ export component WordleView inherits Window {
     // Status: 0=empty, 1=absent, 2=present, 3=correct
 
     function cell-border-width(status: int) -> length {
-        if status == 2 { return 5px; }   // present: thick border
         return 2px;
     }
 
     function cell-bg(status: int) -> brush {
-        if status == 3 { return #777; }        // correct: medium gray
-        if status == 2 { return #ddd; }        // present: light gray
-        if status == 1 { return white; }        // absent: white
+        if status == 3 { return #666666; }        // correct: dark gray
+        if status == 2 { return #d0d0d0; }        // present: light gray
+        if status == 1 { return white; }          // absent: white
         return white;
     }
 
     function cell-fg(status: int) -> color {
-        if status == 3 { return white; }        // correct: white on gray
         return black;
     }
 
     function cell-indicator(status: int) -> string {
         if status == 3 { return "■"; }          // correct spot
         if status == 2 { return "□"; }          // wrong spot
-        if status == 1 { return "×"; }          // not in word
         return "";
     }
 
     function key-bg(status: int) -> brush {
-        if status == 3 { return #777; }         // correct: medium gray
-        if status == 2 { return #ddd; }         // present: light gray
-        if status == 1 { return white; }        // absent: white
-        return white;
+        if status == 3 { return #666666; }         // correct: dark gray
+        if status == 2 { return #aaaaaa; }         // present: medium gray
+        if status == 1 { return white; }           // absent: white key cap with x
+        return #dcdcdc;                            // unused: light gray key cap
     }
 
     function key-indicator(status: int) -> string {
@@ -453,12 +569,10 @@ export component WordleView inherits Window {
     }
 
     function key-border-width(status: int) -> length {
-        if status == 2 { return 5px; }
         return 2px;
     }
 
     function key-fg(status: int) -> color {
-        if status == 3 { return white; }
         return black;
     }
 }

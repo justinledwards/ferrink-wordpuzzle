@@ -23,3 +23,45 @@
 - 2026-07-28: Installed the exact release binary through Ferrink, verified its
   `/proc` executable path and SHA-256, observed live guesses and evaluated
   tile/keyboard feedback, and left the application running on the KOA3.
+- 2026-07-30: Added `GAME_HISTORY_PLAN.md` for a versioned, atomic log of
+  completed games and derived post-game statistics. This change is planning
+  only; runtime persistence and UI behavior are not implemented yet.
+- 2026-07-30: The documentation-only planning change passed formatting, all 10
+  tests, and pedantic Clippy. `cargo audit` found no vulnerabilities and
+  repeated the four already documented unmaintained transitive dependencies.
+- 2026-07-30: Implemented the version-one game-history model, validation,
+  derived statistics, atomic owner-only JSON repository, deterministic desktop
+  and Kindle paths, controller recording, demo isolation, and post-game Slint
+  statistics panel.
+- 2026-07-30: Local validation passed formatting, all 37 tests, and pedantic
+  Clippy with zero warnings. `cargo audit` found no vulnerabilities and repeated
+  the four allowed unmaintained transitive dependency warnings.
+- 2026-07-30: `cargo zigbuild` with Homebrew Zig 0.16.0 produced a stripped,
+  statically linked 32-bit ARM EABI5 release binary (6,736,084 bytes, SHA-256
+  `64f92ade1bcb34052db2ec899fbd79f93f697058d1433ea120df1cf5d8996c8c`).
+  Kindle installation, rendering, and restart persistence verification remain
+  pending because no device connection is configured in this checkout.
+- 2026-07-30: Restored a strict, pinned-host Ferrink connection using the
+  securely transferred KOA3 deployment identity. Re-ran all locked release
+  gates, atomically replaced only `/mnt/us/ferrink-wordpuzzle`, synced it, and
+  verified the device file is 6,736,084 bytes with SHA-256
+  `64f92ade1bcb34052db2ec899fbd79f93f697058d1433ea120df1cf5d8996c8c`.
+- 2026-07-30: Launched Word Puzzle from a freshly captured Ferrink frame and
+  verified the six five-cell rows, outlined keyboard, `GO`, backspace, and
+  upper-right close control on the KOA3. Exactly one process resolved to the
+  installed executable. The state directory is intentionally not created until
+  the first completed game, so completed-game and restart persistence checks
+  remain pending.
+- 2026-07-30: Merged the Kindle grayscale and dictionary work into the
+  history-enabled checkout: enabled 16-shade rendering, restored the evaluated
+  tile/key palette and indicators, expanded accepted guesses to 12,953 words,
+  and separated the 2,309 curated target words from accepted guesses.
+- 2026-07-30: The merged build passed formatting, all 39 tests, and pedantic
+  Clippy with zero warnings. The dependency audit found no vulnerabilities and
+  repeated four allowed unmaintained transitive dependency warnings.
+- 2026-07-30: `cargo zigbuild` produced a stripped, statically linked 32-bit ARM
+  EABI5 release binary (6,759,492 bytes, SHA-256
+  `981a176456f8aebcb549a27ca541d9f79f1ff954d036230e6f78904d4c5175e4`).
+  It was atomically installed, launched from a fresh Ferrink capture, visually
+  verified with grayscale evaluated tiles and keys, and matched one live
+  `/mnt/us/ferrink-wordpuzzle` process with the exact device-side hash.

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use slint::{ComponentHandle, Timer, TimerMode};
 
 pub mod callback;
@@ -15,21 +17,41 @@ pub fn main() {
     let _kindle_backend = {
         let backend =
             slint_backend_kindle::install(KINDLE_FONT).expect("failed to install Kindle backend");
-        backend.set_black_and_white(true);
         backend
     };
 
-    let (main_window, controller) = init();
-    if std::env::var("SLINT_MCP_PORT").is_ok() {
+    let demo_mode = std::env::var_os("SLINT_MCP_PORT").is_some();
+    let history_repo = history_repository(demo_mode);
+    let (main_window, controller) = init(history_repo);
+    if demo_mode {
         start_demo(&main_window, &controller);
     }
     let _ = main_window.run();
 }
 
-fn init() -> (ui::WordleView, mvc::WordleController) {
+fn history_repository(demo_mode: bool) -> Rc<dyn mvc::GameHistoryRepository> {
+    if demo_mode {
+        return Rc::new(mvc::InMemoryGameHistoryRepository::new());
+    }
+
+    match mvc::resolve_game_history_path() {
+        Ok(path) => Rc::new(mvc::FileGameHistoryRepository::new(path)),
+        Err(error) => {
+            eprintln!("Could not resolve game-history storage: {error}");
+            Rc::new(mvc::UnavailableGameHistoryRepository::new(
+                error.to_string(),
+            ))
+        }
+    }
+}
+
+fn init(
+    history_repo: Rc<dyn mvc::GameHistoryRepository>,
+) -> (ui::WordleView, mvc::WordleController) {
     let view_handle = ui::WordleView::new().unwrap();
 
-    let wordle_controller = mvc::WordleController::new(mvc::WordRepositoryImpl::new());
+    let wordle_controller =
+        mvc::WordleController::new(mvc::WordRepositoryImpl::new(), history_repo);
 
     ui::wordle_adapter::connect(&view_handle, &wordle_controller);
 
