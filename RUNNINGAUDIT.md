@@ -1,5 +1,12 @@
 # Running audit
 
+- 2026-08-18: Corrected the shared backend's initial `EVIOCGSW` cover-state
+  conversion so it uses the same reviewed KOA3 polarity as later lid events.
+  All 39 all-feature tests, formatting, pedantic Clippy auto-fix/check, and ARM
+  `cargo zigbuild` passed. `cargo audit` found no vulnerabilities and repeated
+  the four documented transitive warnings. The stripped ARM binary is
+  6,774,372 bytes with SHA-256
+  `0f8e2118b8c897d80b8c6307fe63c00cb73ee11492c94abd17c2f34765d6c87e`.
 - 2026-08-18: Integrated the shared passive magnetic-cover callback from the
   Kindle Slint backend and added the uniform Ferrink sleeping overlay. The app
   leaves suspend and wake authority with Amazon powerd.

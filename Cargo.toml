@@ -21,7 +21,7 @@ slint = { git = "https://github.com/slint-ui/slint", rev = "5e122db954f9e92c26b1
 
 [target.'cfg(all(target_arch = "arm", target_os = "linux", target_env = "musl"))'.dependencies]
 slint = { git = "https://github.com/slint-ui/slint", rev = "5e122db954f9e92c26b1924c021b8c8ece323908", default-features = false, features = ["std", "compat-1-2", "renderer-software", "software-renderer-path", "unstable-fontique-011"] }
-slint-backend-kindle = { git = "https://github.com/justinledwards/ferrink-home-assistant", rev = "ef1326bfaf4af309b53726f8224f136cd96403fd", package = "slint-backend-kindle" }
+slint-backend-kindle = { git = "https://github.com/justinledwards/ferrink-home-assistant", rev = "158b26abce030b66fb273e3edb2d80b4e219c33c", package = "slint-backend-kindle" }
 fontique = { version = "0.11", default-features = false, features = ["std", "fontconfig-dlopen"] }
 fontdb = { version = "0.23", default-features = false, features = ["std", "fs", "memmap"] }
 

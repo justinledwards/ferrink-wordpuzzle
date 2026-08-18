@@ -4444,7 +4444,7 @@ dependencies = [
 [[package]]
 name = "slint-backend-kindle"
 version = "0.5.1"
-source = "git+https://github.com/justinledwards/ferrink-home-assistant?rev=ef1326bfaf4af309b53726f8224f136cd96403fd#ef1326bfaf4af309b53726f8224f136cd96403fd"
+source = "git+https://github.com/justinledwards/ferrink-home-assistant?rev=158b26abce030b66fb273e3edb2d80b4e219c33c#158b26abce030b66fb273e3edb2d80b4e219c33c"
 dependencies = [
  "fontdb",
  "fontique 0.10.0",
