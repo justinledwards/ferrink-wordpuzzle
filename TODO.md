@@ -12,3 +12,4 @@
 - [x] Add a Kindle-readable post-game statistics panel.
 - [x] Deploy the history-enabled ARM release and verify its initial KOA3 UI.
 - [ ] Verify history persistence through application and device restarts.
+- [x] Show the shared Ferrink sleeping screen for magnetic-cover suspend.

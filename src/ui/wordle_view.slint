@@ -24,6 +24,7 @@ export component WordleView inherits Window {
     in-out property <string> stats-streak;
     in-out property <string> stats-distribution;
     in-out property <string> stats-warning;
+    in-out property <bool> sleeping: false;
 
     // Callbacks from UI to controller (handled by Rust)
     callback guess-letter(string);
@@ -574,5 +575,59 @@ export component WordleView inherits Window {
 
     function key-fg(status: int) -> color {
         return black;
+    }
+
+    if root.sleeping : Rectangle {
+        background: #eeece3;
+
+        TouchArea {}
+
+        Rectangle {
+            x: 74px;
+            y: 377px;
+            width: 610px;
+            height: 270px;
+            background: #f7f6f0;
+            border-width: 4px;
+            border-color: black;
+
+            Text {
+                y: 34px;
+                width: parent.width;
+                height: 26px;
+                text: "FERRINK";
+                color: #4b4a46;
+                font-size: 15px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Text {
+                y: 91px;
+                width: parent.width;
+                height: 70px;
+                text: "Sleeping";
+                color: black;
+                font-size: 46px;
+                font-weight: 800;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Text {
+                x: 38px;
+                y: 169px;
+                width: parent.width - 76px;
+                height: 48px;
+                text: "Open the cover or press the power button to wake.";
+                color: #4b4a46;
+                font-size: 18px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+        }
     }
 }

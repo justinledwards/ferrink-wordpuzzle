@@ -1,5 +1,14 @@
 # Running audit
 
+- 2026-08-18: Integrated the shared passive magnetic-cover callback from the
+  Kindle Slint backend and added the uniform Ferrink sleeping overlay. The app
+  leaves suspend and wake authority with Amazon powerd.
+- 2026-08-18: Integrated the complete versioned, atomic game-history work from
+  GitHub with the grayscale, dictionary, and sleep changes. Updated the
+  host-only `webbrowser` lock to 1.2.2 after RUSTSEC-2026-0257; `cargo audit`
+  then passed with four transitive unmaintained-crate warnings and no known
+  vulnerabilities.
+
 - 2026-07-28: Cloned the initial draft and confirmed the checked-in formatter,
   test, and pedantic-Clippy gates did not pass.
 - 2026-07-28: Isolated desktop Slint features from the ARM musl target and

@@ -23,6 +23,19 @@ pub fn main() {
     let demo_mode = std::env::var_os("SLINT_MCP_PORT").is_some();
     let history_repo = history_repository(demo_mode);
     let (main_window, controller) = init(history_repo);
+    #[cfg(not(all(target_arch = "arm", target_os = "linux", target_env = "musl")))]
+    if std::env::var_os("FERRINK_DEMO_SLEEPING").is_some() {
+        main_window.set_sleeping(true);
+    }
+    #[cfg(all(target_arch = "arm", target_os = "linux", target_env = "musl"))]
+    _kindle_backend.on_cover_state({
+        let weak = main_window.as_weak();
+        move |closed| {
+            if let Some(view) = weak.upgrade() {
+                view.set_sleeping(closed);
+            }
+        }
+    });
     if demo_mode {
         start_demo(&main_window, &controller);
     }
